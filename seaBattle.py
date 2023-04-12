@@ -1,3 +1,5 @@
+from random import randint
+
 class Dot:
     def __init__(self, x, y):
         self.x = x
@@ -76,6 +78,121 @@ class Board:
         if self.hid:
             res = res.replace("#", "0")
         return res 
+    def out(self, _dot):
+        return not ((0 <= _dot.x < self.size) and (0 <= _dot.y < self.size))
 
-b = Board()
-print(b)
+
+    def contour(self, ship, verb = False):
+        near = [
+            (-1,-1), (-1, 0),(-1, 1),
+            (0, -1),(0, 0),(0, 1),
+            (1, -1),(1, 0),(1, 1)
+        ]
+        for d in ship.dots:
+            for dx, dy in near:
+                cur = Dot(d.x + dx, d.y + dy)
+                if not(self.out(cur)) and cur not in self.busy:
+                    if verb:
+                        self.field[cur.x][cur.y] = "."
+                    self.busy.append(cur)
+    
+    def add_ship(self, ship):
+        for d in ship.dots:
+            if self.out(d) or d in self.busy:
+                raise BoardWrongShipException()
+        for d in ship.dots:
+            self.field[d.x][d.y] = "#"
+            self.busy.append(d)
+        
+        self.ships.append(ship)
+        self.contour(ship)
+    
+    def shot(self, d):
+        if self.out(d):
+            raise BoardOutException()
+        
+        if d in self.busy:
+            raise BoardUseException()
+        
+        self.busy.append(d)
+
+        for ship in self.ships:
+            if ship.shooten(d):
+                ship.lives -= 1
+                self.field[d.x][d.y] = "X"
+                if ship.lives == 0:
+                    self.count += 1
+                    self.contour(ship, verb= True)
+                    print("Корабль уничтожен")
+                    return False
+                else:
+                    print("Корабль ранен")
+                    return True
+            
+        self.field[d.x][d.y] = "."
+        print("МИМО!")
+        return False
+    
+    def bigin(self):
+        self.busy = []
+
+class Player:
+    def __init__(self, board, enemy):
+        self.board = board
+        self.enemy = enemy
+    
+    def ask(self):
+        raise NotImplementedError()
+    
+    def move(self):
+        while True:
+            try:
+                target = self.ask
+                repeat = self.enemy.shot(target)
+                return repeat
+            except BoardException as e:
+                print(e)
+
+class AI(Player):
+    def ask(self):
+        d = Dot(randint(0,5), randint(0,5))
+        print(f"Ход компьютера: {d.x+1}{d.y +1}")
+        return d
+    
+class User(Player):
+    def ask(self):
+        while True:
+            cords = input("Ваш ход: ").split()
+            if len(cords) != 2:
+                print("Введите две координаты!")
+                continue
+
+            x,y = cords
+
+            if not(x.isdigit()) or not (y.isdigit()):
+                print("Введите числа")
+                continue
+
+            x,y = int(x), int(y)
+            return Dot(x-1,y-1)
+class Game:
+    def try_board(self):
+        lens = [3,2,2,1,1,1,1]
+        board = Board(size=self.size)
+        attemps = 0
+        for l in lens:
+            while True:
+                if attemps > 2000:
+                    return None
+                ship = Ship(Dot(randint(0, self.size), randint(0, self.size)), l, randint(0, 1))
+                try:
+                    board.add_ship(ship)
+                    break
+                except BoardWrongShipException:
+                    pass
+        board.begin()
+        return board
+    
+g = Game()
+g.size = 6
+print(g.try_board())

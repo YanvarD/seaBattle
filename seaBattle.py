@@ -22,7 +22,7 @@ class Ship:
         ship_dots = []
         for i in range(self.len_ship):
             cur_x = self.bow.x
-            c  = self.bow.y
+            cur_y  = self.bow.y
 
             if self.orintation == 0:
                 cur_x += i
